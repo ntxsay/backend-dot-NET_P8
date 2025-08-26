@@ -40,23 +40,44 @@ public class RewardsService : IRewardsService
 
         foreach (var visitedLocation in userLocations)
         {
+            attractions.ForEach(attraction =>
+            {
+                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName) && NearAttraction(visitedLocation, attraction))
+                {
+                    user.AddUserReward(new UserReward(visitedLocation, attraction, GetRewardPoints(attraction, user)));
+                }
+            });
+        }
+    }
+    
+    public void CalculateRewards(User user, Attraction[] attractions)
+    {
+        count++;
+        var userLocations = user.VisitedLocations.ToArray();
+
+        foreach (var visitedLocation in userLocations)
+        {
             foreach (var attraction in attractions)
             {
-                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
+                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName) && NearAttraction(visitedLocation, attraction))
                 {
-                    if (NearAttraction(visitedLocation, attraction))
-                    {
-                        user.AddUserReward(new UserReward(visitedLocation, attraction, GetRewardPoints(attraction, user)));
-                    }
+                    user.AddUserReward(new UserReward(visitedLocation, attraction, GetRewardPoints(attraction, user)));
                 }
             }
         }
     }
 
+    public Attraction[] GetMostProximalAttractions(Locations location)
+    {
+        var attractions = _gpsUtil.GetAttractions().ToArray();
+        return attractions.OrderBy(item => GetDistance(item, location)).ToArray();
+    }
+
     public bool IsWithinAttractionProximity(Attraction attraction, Locations location)
     {
-        Console.WriteLine(GetDistance(attraction, location));
-        return GetDistance(attraction, location) <= _attractionProximityRange;
+        var distance = GetDistance(attraction, location);
+        Console.WriteLine(distance);
+        return distance <= _attractionProximityRange;
     }
 
     private bool NearAttraction(VisitedLocation visitedLocation, Attraction attraction)
