@@ -1,5 +1,6 @@
 ﻿using GpsUtil.Location;
 using Microsoft.AspNetCore.Mvc;
+using TourGuide.Models.DTOs;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
 using TripPricer;
@@ -20,42 +21,69 @@ public class TourGuideController : ControllerBase
     [HttpGet("getLocation")]
     public ActionResult<VisitedLocation> GetLocation([FromQuery] string userName)
     {
-        var location = _tourGuideService.GetUserLocation(GetUser(userName));
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrWhiteSpace(userName))
+        {
+            return new JsonResult(null);
+        }
+        
+        var user = GetUser(userName) ?? new User(Guid.NewGuid(), userName.Trim(), "000", "jon@tourGuide.com");
+
+        var location = _tourGuideService.GetUserLocation(user);
         return Ok(location);
     }
 
-    // TODO: Change this method to no longer return a List of Attractions.
-    // Instead: Get the closest five tourist attractions to the user - no matter how far away they are.
-    // Return a new JSON object that contains:
-    // Name of Tourist attraction, 
-    // Tourist attractions lat/long, 
-    // The user's location lat/long, 
-    // The distance in miles between the user's location and each of the attractions.
-    // The reward points for visiting each Attraction.
-    //    Note: Attraction reward points can be gathered from RewardsCentral
     [HttpGet("getNearbyAttractions")]
-    public ActionResult<List<Attraction>> GetNearbyAttractions([FromQuery] string userName)
+    public JsonResult GetNearbyAttractions([FromQuery] string userName)
     {
-        var visitedLocation = _tourGuideService.GetUserLocation(GetUser(userName));
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrWhiteSpace(userName))
+        {
+            return new JsonResult(null);
+        }
+        
+        var user = GetUser(userName) ?? new User(Guid.NewGuid(), userName.Trim(), "000", "jon@tourGuide.com");
+
+        var visitedLocation = _tourGuideService.GetUserLocation(user);
         var attractions = _tourGuideService.GetNearByAttractions(visitedLocation);
-        return Ok(attractions);
+        var json = attractions.Select(attraction => new AttractionDto()
+        {
+            AttractionName = attraction.AttractionName,
+            AttractionLocation = attraction,
+            UserLocation = visitedLocation.Location,
+            Distance = _tourGuideService.GetDistance(attraction, visitedLocation.Location)
+        }).ToArray();
+            
+        return new JsonResult(json);
     }
 
     [HttpGet("getRewards")]
     public ActionResult<List<UserReward>> GetRewards([FromQuery] string userName)
     {
-        var rewards = _tourGuideService.GetUserRewards(GetUser(userName));
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrWhiteSpace(userName))
+        {
+            return BadRequest();
+        }
+        
+        var user = GetUser(userName) ?? new User(Guid.NewGuid(), userName.Trim(), "000", "jon@tourGuide.com");
+
+        var rewards = _tourGuideService.GetUserRewards(user);
         return Ok(rewards);
     }
 
     [HttpGet("getTripDeals")]
     public ActionResult<List<Provider>> GetTripDeals([FromQuery] string userName)
     {
-        var deals = _tourGuideService.GetTripDeals(GetUser(userName));
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrWhiteSpace(userName))
+        {
+            return BadRequest();
+        }
+        
+        var user = GetUser(userName) ?? new User(Guid.NewGuid(), userName.Trim(), "000", "jon@tourGuide.com");
+
+        var deals = _tourGuideService.GetTripDeals(user);
         return Ok(deals);
     }
 
-    private User GetUser(string userName)
+    private User? GetUser(string userName)
     {
         return _tourGuideService.GetUser(userName);
     }
