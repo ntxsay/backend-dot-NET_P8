@@ -10,7 +10,7 @@ namespace GpsUtil;
 
 public class GpsUtil
 {
-    private static readonly SemaphoreSlim rateLimiter = new(1000, 1000);
+    private static readonly SemaphoreSlim rateLimiter = new(6000, 15000);
 
     public VisitedLocation GetUserLocation(Guid userId)
     {
@@ -18,6 +18,29 @@ public class GpsUtil
         try
         {
             Sleep();
+
+            double longitude = ThreadLocalRandom.NextDouble(-180.0, 180.0);
+            longitude = Math.Round(longitude, 6);
+
+            double latitude = ThreadLocalRandom.NextDouble(-90, 90);
+            latitude = Math.Round(latitude, 6);
+
+            VisitedLocation visitedLocation = new(userId, new Locations(latitude, longitude), DateTime.UtcNow);
+
+            return visitedLocation;
+        }
+        finally
+        {
+            rateLimiter.Release();
+        }
+    }
+    
+    public async Task<VisitedLocation> GetUserLocationAsync(Guid userId)
+    {
+        await rateLimiter.WaitAsync();
+        try
+        {
+            await SleepAsync();
 
             double longitude = ThreadLocalRandom.NextDouble(-180.0, 180.0);
             longitude = Math.Round(longitude, 6);
@@ -85,6 +108,12 @@ public class GpsUtil
     {
         int delay = ThreadLocalRandom.Current.Next(30, 100);
         Thread.Sleep(delay);
+    }
+    
+    private async Task SleepAsync()
+    {
+        int delay = ThreadLocalRandom.Current.Next(30, 100);
+        await Task.Delay(delay);
     }
 
     private void SleepLighter()
