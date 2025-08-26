@@ -51,12 +51,13 @@ public class TourGuideService : ITourGuideService
 
     public VisitedLocation GetUserLocation(User user)
     {
-        return user.VisitedLocations.Any() ? user.GetLastVisitedLocation() : TrackUserLocation(user);
+        var lastVisitedLocation = user.GetLastVisitedLocation();
+        return user.VisitedLocations.Any() && lastVisitedLocation != null? lastVisitedLocation : TrackUserLocation(user);
     }
 
-    public User GetUser(string userName)
+    public User? GetUser(string userName)
     {
-        return _internalUserMap.ContainsKey(userName) ? _internalUserMap[userName] : null;
+        return _internalUserMap.GetValueOrDefault(userName);
     }
 
     public List<User> GetAllUsers()
@@ -89,20 +90,22 @@ public class TourGuideService : ITourGuideService
         _rewardsService.CalculateRewards(user);
         return visitedLocation;
     }
+    
+    public async Task<VisitedLocation> TrackUserLocationAsync(User user)
+    {
+        VisitedLocation visitedLocation = await _gpsUtil.GetUserLocationAsync(user.UserId);
+        user.AddToVisitedLocations(visitedLocation);
+        _rewardsService.CalculateRewards(user);
+        return visitedLocation;
+    }
 
     public List<Attraction> GetNearByAttractions(VisitedLocation visitedLocation)
     {
-        List<Attraction> nearbyAttractions = new ();
-        foreach (var attraction in _gpsUtil.GetAttractions())
-        {
-            if (_rewardsService.IsWithinAttractionProximity(attraction, visitedLocation.Location))
-            {
-                nearbyAttractions.Add(attraction);
-            }
-        }
-
+        var nearbyAttractions =  _rewardsService.GetMostProximalAttractions(visitedLocation.Location).Take(5).ToList();
         return nearbyAttractions;
     }
+    
+    public double GetDistance(Locations loc1, Locations loc2) => _rewardsService.GetDistance(loc1, loc2);
 
     private void AddShutDownHook()
     {
