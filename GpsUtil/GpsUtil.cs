@@ -10,7 +10,8 @@ namespace GpsUtil;
 
 public class GpsUtil
 {
-    private static readonly SemaphoreSlim rateLimiter = new(6000, 15000);
+    //private static readonly SemaphoreSlim rateLimiter = new(6000, 15000);
+    private static readonly SemaphoreSlim rateLimiter = new(7100, 16100);
 
     public VisitedLocation GetUserLocation(Guid userId)
     {
